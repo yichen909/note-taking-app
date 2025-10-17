@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from flask import Flask, send_from_directory
 from flask_cors import CORS
+from sqlalchemy import inspect, text
 from src.models.user import db
 from src.routes.user import user_bp
 from src.routes.note import note_bp
@@ -30,6 +31,16 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 with app.app_context():
     db.create_all()
+    inspector = inspect(db.engine)
+    note_columns = {col['name'] for col in inspector.get_columns('note')}
+    if 'position' not in note_columns:
+        db.session.execute(text('ALTER TABLE note ADD COLUMN position INTEGER DEFAULT 0'))
+        db.session.commit()
+        # Assign sequential positions preserving current updated order
+        notes_in_order = Note.query.order_by(Note.updated_at.desc()).all()
+        for idx, note in enumerate(notes_in_order):
+            note.position = idx
+        db.session.commit()
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')

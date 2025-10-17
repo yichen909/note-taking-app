@@ -115,9 +115,10 @@
             border: 2px solid transparent;
             border-radius: 10px;
             margin-bottom: 10px;
-            cursor: pointer;
+            cursor: grab;
             transition: all 0.3s ease;
             background: #f8f9fa;
+            user-select: none;
         }
 
         .note-item:hover {
@@ -128,6 +129,20 @@
         .note-item.active {
             border-color: #667eea;
             background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        }
+
+        .note-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .note-item.drag-over {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.08);
+        }
+
+        .notes-list.drag-disabled .note-item {
+            cursor: pointer;
         }
 
         .note-title {
@@ -377,6 +392,9 @@
                 this.notes = [];
                 this.currentNote = null;
                 this.isLoading = false;
+                this.draggedNoteId = null;
+                this.searchQuery = '';
+                this.orderSaveTimeout = null;
                 this.init();
             }
 
@@ -415,6 +433,7 @@
                     if (!response.ok) throw new Error('Failed to load notes');
                     
                     this.notes = await response.json();
+                    this.sortNotesByPosition();
                     this.renderNotesList();
                     this.hideMessage();
                 } catch (error) {
@@ -424,22 +443,131 @@
                 }
             }
 
-            renderNotesList() {
+            sortNotesByPosition() {
+                this.notes.sort((a, b) => {
+                    const posA = Number.isInteger(a.position) ? a.position : Number.MAX_SAFE_INTEGER;
+                    const posB = Number.isInteger(b.position) ? b.position : Number.MAX_SAFE_INTEGER;
+                    if (posA === posB) {
+                        const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+                        const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+                        return dateB - dateA;
+                    }
+                    return posA - posB;
+                });
+            }
+
+            renderNotesList(notesToRender = this.notes) {
                 const notesList = document.getElementById('notesList');
+                const dragEnabled = this.searchQuery.trim() === '' && notesToRender === this.notes;
                 
-                if (this.notes.length === 0) {
+                if (notesToRender.length === 0) {
                     notesList.innerHTML = '<div class="empty-state"><p>No notes yet. Create your first note!</p></div>';
+                    notesList.classList.remove('drag-disabled');
                     return;
                 }
 
-                notesList.innerHTML = this.notes.map(note => `
+                notesList.classList.toggle('drag-disabled', !dragEnabled);
+
+                notesList.innerHTML = notesToRender.map(note => `
                     <div class="note-item ${this.currentNote && this.currentNote.id === note.id ? 'active' : ''}" 
-                         data-note-id="${note.id}" onclick="noteTaker.selectNote(${note.id})">
+                         data-note-id="${note.id}" draggable="${dragEnabled}" onclick="noteTaker.selectNote(${note.id})">
                         <div class="note-title">${this.escapeHtml(note.title || 'Untitled')}</div>
                         <div class="note-preview">${this.escapeHtml(note.content || 'No content')}</div>
                         <div class="note-date">${this.formatDate(note.updated_at)}</div>
                     </div>
                 `).join('');
+
+                if (dragEnabled) {
+                    const noteItems = notesList.querySelectorAll('.note-item');
+                    noteItems.forEach(item => {
+                        const noteId = parseInt(item.dataset.noteId, 10);
+                        item.addEventListener('dragstart', (event) => this.handleDragStart(event, noteId));
+                        item.addEventListener('dragover', (event) => this.handleDragOver(event));
+                        item.addEventListener('drop', (event) => this.handleDrop(event, noteId));
+                        item.addEventListener('dragleave', (event) => this.handleDragLeave(event));
+                        item.addEventListener('dragend', () => this.handleDragEnd());
+                    });
+                }
+            }
+
+            handleDragStart(event, noteId) {
+                this.draggedNoteId = noteId;
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', String(noteId));
+                event.currentTarget.classList.add('dragging');
+            }
+
+            handleDragOver(event) {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+                event.currentTarget.classList.add('drag-over');
+            }
+
+            async handleDrop(event, targetNoteId) {
+                event.preventDefault();
+                event.currentTarget.classList.remove('drag-over');
+
+                const draggedId = this.draggedNoteId;
+                if (draggedId === null || draggedId === targetNoteId) {
+                    this.handleDragEnd();
+                    return;
+                }
+
+                const draggedIndex = this.notes.findIndex(n => n.id === draggedId);
+                const targetExists = this.notes.some(n => n.id === targetNoteId);
+                if (draggedIndex === -1 || !targetExists) {
+                    this.handleDragEnd();
+                    return;
+                }
+
+                const [movedNote] = this.notes.splice(draggedIndex, 1);
+                const targetIndexAfterRemoval = this.notes.findIndex(n => n.id === targetNoteId);
+                const rect = event.currentTarget.getBoundingClientRect();
+                const shouldInsertAfter = (event.clientY - rect.top) > rect.height / 2;
+                const insertIndex = shouldInsertAfter ? targetIndexAfterRemoval + 1 : targetIndexAfterRemoval;
+
+                this.notes.splice(insertIndex, 0, movedNote);
+                this.updatePositionsAfterReorder();
+                this.sortNotesByPosition();
+                this.renderNotesList();
+                this.persistNoteOrder();
+                this.handleDragEnd();
+            }
+
+            handleDragLeave(event) {
+                event.currentTarget.classList.remove('drag-over');
+            }
+
+            handleDragEnd() {
+                this.draggedNoteId = null;
+                document.querySelectorAll('.note-item.dragging, .note-item.drag-over').forEach(item => {
+                    item.classList.remove('dragging', 'drag-over');
+                });
+            }
+
+            updatePositionsAfterReorder() {
+                this.notes.forEach((note, index) => {
+                    note.position = index;
+                });
+            }
+
+            persistNoteOrder() {
+                clearTimeout(this.orderSaveTimeout);
+                this.orderSaveTimeout = setTimeout(async () => {
+                    const order = this.notes.map(note => note.id);
+                    try {
+                        const response = await fetch('/api/notes/reorder', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ order })
+                        });
+                        if (!response.ok) {
+                            throw new Error('Failed to save new order');
+                        }
+                    } catch (error) {
+                        this.showMessage(`Error saving order: ${error.message}`, 'error');
+                    }
+                }, 300);
             }
 
             async selectNote(noteId) {
@@ -536,9 +664,10 @@
                     if (existingIndex >= 0) {
                         this.notes[existingIndex] = savedNote;
                     } else {
-                        this.notes.unshift(savedNote);
+                        this.notes.push(savedNote);
                     }
                     
+                    this.sortNotesByPosition();
                     this.renderNotesList();
                     document.getElementById('editorTitle').textContent = savedNote.title;
                     
@@ -573,26 +702,29 @@
             }
 
             searchNotes(query) {
-                const filteredNotes = query.trim() === '' ? this.notes : 
-                    this.notes.filter(note => 
-                        (note.title && note.title.toLowerCase().includes(query.toLowerCase())) ||
-                        (note.content && note.content.toLowerCase().includes(query.toLowerCase()))
-                    );
+                this.searchQuery = query;
+                const trimmedQuery = query.trim();
 
-                const notesList = document.getElementById('notesList');
-                if (filteredNotes.length === 0) {
-                    notesList.innerHTML = '<div class="empty-state"><p>No notes found matching your search.</p></div>';
+                if (trimmedQuery === '') {
+                    this.sortNotesByPosition();
+                    this.renderNotesList();
                     return;
                 }
 
-                notesList.innerHTML = filteredNotes.map(note => `
-                    <div class="note-item ${this.currentNote && this.currentNote.id === note.id ? 'active' : ''}" 
-                         data-note-id="${note.id}" onclick="noteTaker.selectNote(${note.id})">
-                        <div class="note-title">${this.escapeHtml(note.title || 'Untitled')}</div>
-                        <div class="note-preview">${this.escapeHtml(note.content || 'No content')}</div>
-                        <div class="note-date">${this.formatDate(note.updated_at)}</div>
-                    </div>
-                `).join('');
+                const lowerQuery = trimmedQuery.toLowerCase();
+                const filteredNotes = this.notes.filter(note => 
+                    (note.title && note.title.toLowerCase().includes(lowerQuery)) ||
+                    (note.content && note.content.toLowerCase().includes(lowerQuery))
+                );
+
+                if (filteredNotes.length === 0) {
+                    const notesList = document.getElementById('notesList');
+                    notesList.innerHTML = '<div class="empty-state"><p>No notes found matching your search.</p></div>';
+                    notesList.classList.add('drag-disabled');
+                    return;
+                }
+
+                this.renderNotesList(filteredNotes);
             }
 
             showMessage(message, type) {
@@ -637,4 +769,3 @@
     </script>
 </body>
 </html>
-
