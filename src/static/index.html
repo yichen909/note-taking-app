@@ -359,6 +359,16 @@
                 <div class="editor-header">
                     <h2 class="editor-title" id="editorTitle">Select a note to edit</h2>
                     <div class="editor-actions" id="editorActions" style="display: none;">
+                        <select id="translateLang" class="form-input" style="padding:6px 10px; height:36px;">
+                            <option value="chinese">Chinese</option>
+                            <option value="spanish">Spanish</option>
+                            <option value="french">French</option>
+                            <option value="german">German</option>
+                            <option value="japanese">Japanese</option>
+                            <option value="korean">Korean</option>
+                            <option value="arabic">Arabic</option>
+                        </select>
+                        <button class="btn" id="translateBtn" title="Translate this note">🌐 Translate</button>
                         <button class="btn btn-save" id="saveBtn">💾 Save</button>
                         <button class="btn btn-delete" id="deleteBtn">🗑️ Delete</button>
                     </div>
@@ -422,6 +432,7 @@
                 
                 document.getElementById('noteTitle').addEventListener('input', autoSave);
                 document.getElementById('noteContent').addEventListener('input', autoSave);
+                document.getElementById('translateBtn').addEventListener('click', () => this.translateCurrentNote());
             }
 
             async loadNotes() {
@@ -676,6 +687,37 @@
                     }
                 } catch (error) {
                     this.showMessage(`Error saving note: ${error.message}`, 'error');
+                }
+            }
+
+            async translateCurrentNote() {
+                if (!this.currentNote || !this.currentNote.id) {
+                    this.showMessage('Please save the note before translating', 'error');
+                    return;
+                }
+
+                const target = document.getElementById('translateLang').value;
+                this.showMessage('Translating note...', 'loading');
+
+                try {
+                    const resp = await fetch(`/api/notes/${this.currentNote.id}/translate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ target_language: target })
+                    });
+
+                    if (!resp.ok) throw new Error('Translation failed');
+                    const data = await resp.json();
+
+                    // Show translated title and content in editor (user can review and save)
+                    document.getElementById('noteTitle').value = data.translated_title || '';
+                    document.getElementById('noteContent').value = data.translated_content || '';
+                    this.currentNote.title = data.translated_title || this.currentNote.title;
+                    this.currentNote.content = data.translated_content || this.currentNote.content;
+                    document.getElementById('editorTitle').textContent = (this.currentNote.title || 'Untitled') + ` — ${target}`;
+                    this.showMessage('Translation ready. Review and save if desired.', 'success');
+                } catch (err) {
+                    this.showMessage(`Error translating note: ${err.message}`, 'error');
                 }
             }
 

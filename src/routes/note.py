@@ -55,6 +55,37 @@ def update_note(note_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+
+@note_bp.route('/notes/<int:note_id>/translate', methods=['POST'])
+def translate_note(note_id):
+    """Translate a note's content to a target language using the LLM helper.
+    Request JSON: { "target_language": "chinese" }
+    Returns: { "translated": "..." }
+    """
+    try:
+        data = request.json
+        if not data or 'target_language' not in data:
+            return jsonify({'error': 'target_language is required'}), 400
+
+        target_language = data['target_language']
+        note = Note.query.get_or_404(note_id)
+
+        # Import translate function lazily to avoid circular imports on startup
+        from src.llm import translate as llm_translate
+
+        # Translate title and content separately to preserve structure
+        translated_title = llm_translate(note.title or '', target_language)
+        translated_content = llm_translate(note.content or '', target_language)
+
+        # Return both translated title and content; client can choose to save
+        return jsonify({
+            'translated_title': translated_title,
+            'translated_content': translated_content
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 @note_bp.route('/notes/<int:note_id>', methods=['DELETE'])
 def delete_note(note_id):
     """Delete a specific note"""
