@@ -1,5 +1,7 @@
+# ...existing code...
 import os
 import sys
+from dotenv import load_dotenv
 # DON'T CHANGE THIS !!!
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -11,8 +13,11 @@ from src.routes.user import user_bp
 from src.routes.note import note_bp
 from src.models.note import Note
 
+# load local .env in development (do NOT commit .env)
+load_dotenv()  # will load .env if exists
+
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
-app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'asdf#FGSgvasgf$5$WGT')
 
 # Enable CORS for all routes
 CORS(app)
@@ -20,13 +25,19 @@ CORS(app)
 # register blueprints
 app.register_blueprint(user_bp, url_prefix='/api')
 app.register_blueprint(note_bp, url_prefix='/api')
-# configure database to use repository-root `database/app.db`
-ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-DB_PATH = os.path.join(ROOT_DIR, 'database', 'app.db')
-# ensure database directory exists
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+# DATABASE configuration:
+DATABASE_URL = os.getenv('DATABASE_URL')
+if DATABASE_URL:
+    # Use external Postgres (e.g., Supabase)
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+else:
+    # fallback to local sqlite for development
+    ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+    DB_PATH = os.path.join(ROOT_DIR, 'database', 'app.db')
+    # ensure database directory exists
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{DB_PATH}"
 
-app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{DB_PATH}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 with app.app_context():
