@@ -1,107 +1,235 @@
+import json
+from datetime import datetime
+
 from flask import Blueprint, jsonify, request
+
 from src.models.note import Note, db
 
-note_bp = Blueprint('note', __name__)
+note_bp = Blueprint("note", __name__)
 
-@note_bp.route('/notes', methods=['GET'])
+
+def _parse_date(value):
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return None
+
+
+def _parse_time(value):
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%H:%M").time()
+    except (ValueError, TypeError):
+        return None
+
+
+def _normalize_tags(tags_value):
+    if not tags_value:
+        return ""
+    if isinstance(tags_value, list):
+        return ", ".join(tag.strip() for tag in tags_value if tag and tag.strip())
+    return ", ".join(part.strip() for part in tags_value.split(",") if part.strip())
+
+
+def _extract_json_payload(raw_text):
+    """Best-effort JSON parsing for LLM responses."""
+    if not raw_text:
+        return {}
+
+    cleaned = raw_text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.strip("`")
+        if "\n" in cleaned:
+            cleaned = cleaned.split("\n", 1)[1]
+        cleaned = cleaned.strip()
+    if cleaned.lower().startswith("json"):
+        cleaned = cleaned[4:].strip()
+
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start != -1 and end != -1:
+        cleaned = cleaned[start : end + 1]
+
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        return {}
+
+
+@note_bp.route("/notes", methods=["GET"])
 def get_notes():
-    """Get all notes, ordered by most recently updated"""
+    """Get all notes, ordered by most recent update."""
     notes = Note.query.order_by(Note.updated_at.desc()).all()
     return jsonify([note.to_dict() for note in notes])
 
-@note_bp.route('/notes', methods=['POST'])
+
+@note_bp.route("/notes", methods=["POST"])
 def create_note():
-    """Create a new note"""
+    """Create a new note."""
     try:
-        data = request.json
-        if not data or 'title' not in data or 'content' not in data:
-            return jsonify({'error': 'Title and content are required'}), 400
-        
-        note = Note(title=data['title'], content=data['content'])
+        data = request.json or {}
+        title = (data.get("title") or "").strip()
+        content = (data.get("content") or "").strip()
+
+        if not title and not content:
+            return jsonify({"error": "Title and content are required"}), 400
+
+        note = Note(
+            title=title or "Untitled",
+            content=content,
+            tags=_normalize_tags(data.get("tags")),
+            event_date=_parse_date(data.get("event_date")),
+            event_time=_parse_time(data.get("event_time")),
+        )
         db.session.add(note)
         db.session.commit()
         return jsonify(note.to_dict()), 201
-    except Exception as e:
+    except Exception as exc:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(exc)}), 500
 
-@note_bp.route('/notes/<int:note_id>', methods=['GET'])
+
+@note_bp.route("/notes/<int:note_id>", methods=["GET"])
 def get_note(note_id):
-    """Get a specific note by ID"""
+    """Get a specific note by ID."""
     note = Note.query.get_or_404(note_id)
     return jsonify(note.to_dict())
 
-@note_bp.route('/notes/<int:note_id>', methods=['PUT'])
+
+@note_bp.route("/notes/<int:note_id>", methods=["PUT"])
 def update_note(note_id):
-    """Update a specific note"""
+    """Update a specific note."""
     try:
         note = Note.query.get_or_404(note_id)
-        data = request.json
-        
+        data = request.json or {}
+
         if not data:
-            return jsonify({'error': 'No data provided'}), 400
-        
-        note.title = data.get('title', note.title)
-        note.content = data.get('content', note.content)
+            return jsonify({"error": "No data provided"}), 400
+
+        if "title" in data:
+            note.title = (data.get("title") or "").strip() or note.title
+        if "content" in data:
+            note.content = data.get("content", note.content)
+        if "tags" in data:
+            note.tags = _normalize_tags(data.get("tags"))
+        if "event_date" in data:
+            note.event_date = _parse_date(data.get("event_date"))
+        if "event_time" in data:
+            note.event_time = _parse_time(data.get("event_time"))
+
         db.session.commit()
         return jsonify(note.to_dict())
-    except Exception as e:
+    except Exception as exc:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(exc)}), 500
 
 
-@note_bp.route('/notes/<int:note_id>/translate', methods=['POST'])
+@note_bp.route("/notes/<int:note_id>/translate", methods=["POST"])
 def translate_note(note_id):
-    """Translate a note's content to a target language using the LLM helper.
-    Request JSON: { "target_language": "chinese" }
-    Returns: { "translated": "..." }
-    """
+    """Translate a note's content to a target language using the LLM helper."""
     try:
-        data = request.json
-        if not data or 'target_language' not in data:
-            return jsonify({'error': 'target_language is required'}), 400
+        data = request.json or {}
+        if "target_language" not in data:
+            return jsonify({"error": "target_language is required"}), 400
 
-        target_language = data['target_language']
+        target_language = data["target_language"]
         note = Note.query.get_or_404(note_id)
 
-        # Import translate function lazily to avoid circular imports on startup
         from src.llm import translate as llm_translate
 
-        # Translate title and content separately to preserve structure
-        translated_title = llm_translate(note.title or '', target_language)
-        translated_content = llm_translate(note.content or '', target_language)
+        translated_title = llm_translate(note.title or "", target_language)
+        translated_content = llm_translate(note.content or "", target_language)
 
-        # Return both translated title and content; client can choose to save
-        return jsonify({
-            'translated_title': translated_title,
-            'translated_content': translated_content
-        }), 200
-    except Exception as e:
+        return jsonify(
+            {
+                "translated_title": translated_title,
+                "translated_content": translated_content,
+            }
+        ), 200
+    except Exception as exc:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(exc)}), 500
 
-@note_bp.route('/notes/<int:note_id>', methods=['DELETE'])
+
+@note_bp.route("/notes/<int:note_id>", methods=["DELETE"])
 def delete_note(note_id):
-    """Delete a specific note"""
+    """Delete a specific note."""
     try:
         note = Note.query.get_or_404(note_id)
         db.session.delete(note)
         db.session.commit()
-        return '', 204
-    except Exception as e:
+        return "", 204
+    except Exception as exc:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(exc)}), 500
 
-@note_bp.route('/notes/search', methods=['GET'])
+
+@note_bp.route("/notes/search", methods=["GET"])
 def search_notes():
-    """Search notes by title or content"""
-    query = request.args.get('q', '')
+    """Search notes by title, content, or tags."""
+    query = request.args.get("q", "")
     if not query:
         return jsonify([])
-    
-    notes = Note.query.filter(
-        (Note.title.contains(query)) | (Note.content.contains(query))
-    ).order_by(Note.updated_at.desc()).all()
-    
+
+    notes = (
+        Note.query.filter(
+            (Note.title.contains(query))
+            | (Note.content.contains(query))
+            | (Note.tags.contains(query))
+        )
+        .order_by(Note.updated_at.desc())
+        .all()
+    )
+
     return jsonify([note.to_dict() for note in notes])
 
+
+@note_bp.route("/notes/generate", methods=["POST"])
+def generate_note():
+    """Generate structured note data from natural language input."""
+    payload = request.json or {}
+    prompt = (payload.get("prompt") or "").strip()
+    language = (payload.get("language") or "english").strip() or "english"
+
+    if not prompt:
+        return jsonify({"error": "prompt is required"}), 400
+
+    try:
+        from src.llm import extract_structured_notes
+
+        llm_response = extract_structured_notes(prompt, lang=language)
+        structured = _extract_json_payload(llm_response)
+
+        if not structured:
+            raise ValueError("Unable to parse generated note. Please try again.")
+
+        title = structured.get("Title") or structured.get("title") or ""
+        notes_content = structured.get("Notes") or structured.get("content") or ""
+        tags = structured.get("Tags") or structured.get("tags") or ""
+        event_date = structured.get("Event Date") or structured.get("event_date")
+        event_time = structured.get("Event Time") or structured.get("event_time")
+
+        normalized_tags = _normalize_tags(tags)
+        parsed_event_date = _parse_date(event_date)
+        parsed_event_time = _parse_time(event_time)
+
+        if parsed_event_date is None:
+            parsed_event_date = datetime.now().date()
+
+        if parsed_event_time is None:
+            now = datetime.now()
+            parsed_event_time = now.replace(second=0, microsecond=0).time()
+
+        response_payload = {
+            "title": title,
+            "content": notes_content,
+            "tags": normalized_tags,
+            "event_date": parsed_event_date.isoformat() if parsed_event_date else None,
+            "event_time": parsed_event_time.strftime("%H:%M") if parsed_event_time else None,
+        }
+        return jsonify(response_payload), 200
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500

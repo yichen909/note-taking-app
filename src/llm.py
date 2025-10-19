@@ -1,5 +1,5 @@
-# import libraries
 import os
+from datetime import datetime
 from openai import OpenAI
 from dotenv import load_dotenv
 from pathlib import Path
@@ -37,10 +37,46 @@ def translate(text, target_language):
     messages = [{"role": "user", "content": prompt}]
     return call_llm_model(model, messages)
 
+system_prompt = '''
+today's date and time: {current_datetime}
+Extract the user's notes into the following structured fields:
+1. Title: A concise title of the notes less than 5 words
+2. Notes: The notes based on user input written in full sentences.
+3. Tags (A list): At most 3 Keywords or tags that categorize the content of the notes.
+Output in JSON format without ```json. Output title and notes in the language: {lang}.
+4. Event Date
+5. Event Time
+Example:
+Input: "Badminton tmr 5pm @polyu".
+Output:
+{{
+ "Title": "Badminton at PolyU",
+ "Notes": "Remember to play badminton at 5pm tomorrow at PolyU.",
+ "Tags": ["badminton", "sports"]
+ "Event Date": "2024-06-05",
+ "Event Time": "17:00"
+}}
+'''
+
+# a function to extract structured notes using LLM model
+def extract_structured_notes(user_input, lang="english"):
+    current_datetime = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+    messages = [
+        {
+            "role": "system",
+            "content": system_prompt.format(
+                lang=lang,
+                current_datetime=current_datetime,
+            ),
+        },
+        {"role": "user", "content": user_input}
+    ]
+    response = call_llm_model(model, messages)
+    return response
+
 # main function
 if __name__ == "__main__":
-    sample_text = "Hello, how are you?"
-    target_lang = "chinese"
-    translated_text = translate(sample_text, target_lang)
-    print(f"Original:{sample_text}")
-    print(f"Translated:{translated_text}")
+    # test the extract notes feature
+    sample_text = "Badminton tmr 5pm @polyu"
+    print("Extracted Structured Notes:")
+    print(extract_structured_notes(sample_text, lang="english"))

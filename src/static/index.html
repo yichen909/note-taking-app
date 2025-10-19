@@ -105,6 +105,25 @@
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
 
+        .generate-note-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .generate-note-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(34, 197, 94, 0.35);
+        }
+
         .notes-list {
             max-height: 500px;
             overflow-y: auto;
@@ -259,6 +278,35 @@
             opacity: 0.8;
         }
 
+        .note-meta {
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: #556;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .tag-pill {
+            display: inline-block;
+            background: rgba(102, 126, 234, 0.1);
+            color: #444;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 0.75rem;
+        }
+
+        .note-event {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(252, 211, 77, 0.15);
+            color: #79510c;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+        }
+
         .loading {
             text-align: center;
             padding: 20px;
@@ -281,6 +329,117 @@
             border-radius: 8px;
             margin-bottom: 20px;
             border: 1px solid #c3e6cb;
+        }
+
+        .helper-text {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-top: 6px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.4);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: #fff;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 520px;
+            box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: 20px 24px 12px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .modal-body {
+            padding: 20px 24px;
+        }
+
+        .modal-footer {
+            padding: 16px 24px 24px;
+            border-top: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #64748b;
+        }
+
+        .modal-helper {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-top: 6px;
+        }
+
+        .preview-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+            background: #f8fafc;
+            margin-top: 16px;
+        }
+
+        .preview-card h4 {
+            margin-bottom: 8px;
+            font-size: 1rem;
+            color: #1f2937;
+        }
+
+        .preview-field {
+            margin-bottom: 12px;
+        }
+
+        .preview-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .modal-message {
+            margin-bottom: 12px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #1f2937;
         }
 
         /* Responsive Design */
@@ -334,6 +493,7 @@
             <div class="sidebar">
                 <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search notes...">
                 <button class="new-note-btn" id="newNoteBtn">✨ New Note</button>
+                <button class="generate-note-btn" id="generateNoteBtn">🤖 Generate Note</button>
                 
                 <div class="notes-list" id="notesList">
                     <div class="loading">Loading notes...</div>
@@ -371,6 +531,21 @@
                         <label class="form-label" for="noteContent">Content</label>
                         <textarea class="form-textarea" id="noteContent" placeholder="Start writing your note..."></textarea>
                     </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="noteTags">Tags (comma separated)</label>
+                        <input type="text" class="form-input" id="noteTags" placeholder="e.g., meeting, planning, ideas">
+                        <p class="helper-text">Add up to three tags to quickly find this note later.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Event Details</label>
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                            <input type="date" class="form-input" id="noteEventDate" style="flex: 1 1 180px; min-width: 160px;">
+                            <input type="time" class="form-input" id="noteEventTime" style="flex: 1 1 140px; min-width: 140px;">
+                        </div>
+                        <p class="helper-text">Optional: capture when this note is relevant.</p>
+                    </div>
                 </div>
 
                 <div class="empty-state" id="emptyState">
@@ -381,52 +556,163 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="generateModal" aria-hidden="true">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Generate Note with AI</h3>
+                <button class="modal-close" id="generateModalClose" aria-label="Close generate modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="generateModalMessage" class="modal-message"></div>
+                <div class="form-group">
+                    <label class="form-label" for="generatePrompt">Describe what you need to note</label>
+                    <textarea class="form-textarea" id="generatePrompt" placeholder="Example: 3 items to bring for badminton game tomorrow at PolyU"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="generateLang">Output Language</label>
+                    <select class="form-input" id="generateLang">
+                        <option value="english">English</option>
+                        <option value="chinese">Chinese</option>
+                        <option value="spanish">Spanish</option>
+                        <option value="french">French</option>
+                        <option value="german">German</option>
+                        <option value="japanese">Japanese</option>
+                        <option value="korean">Korean</option>
+                    </select>
+                </div>
+
+                <div class="preview-card" id="generatedPreview" style="display: none;">
+                    <h4>Generated Note Preview</h4>
+                    <div class="preview-field">
+                        <div class="preview-label">Title</div>
+                        <div id="previewTitle"></div>
+                    </div>
+                    <div class="preview-field">
+                        <div class="preview-label">Content</div>
+                        <div id="previewContent"></div>
+                    </div>
+                    <div class="preview-field">
+                        <div class="preview-label">Tags</div>
+                        <div id="previewTags"></div>
+                    </div>
+                    <div class="preview-field">
+                        <div class="preview-label">Event</div>
+                        <div id="previewEvent"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelGenerateBtn">Cancel</button>
+                <button class="btn btn-save" id="runGenerateBtn">Generate</button>
+                <button class="btn" id="useGeneratedBtn" style="display: none;">Use Note</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         class NoteTaker {
             constructor() {
                 this.notes = [];
                 this.currentNote = null;
+                this.generatedNote = null;
                 this.isLoading = false;
+                this.isGenerating = false;
                 this.init();
             }
 
             async init() {
+                this.cacheDom();
                 this.bindEvents();
                 await this.loadNotes();
             }
 
+            cacheDom() {
+                this.dom = {
+                    newNoteBtn: document.getElementById('newNoteBtn'),
+                    generateNoteBtn: document.getElementById('generateNoteBtn'),
+                    saveBtn: document.getElementById('saveBtn'),
+                    deleteBtn: document.getElementById('deleteBtn'),
+                    translateBtn: document.getElementById('translateBtn'),
+                    translateLang: document.getElementById('translateLang'),
+                    searchBox: document.getElementById('searchBox'),
+                    notesList: document.getElementById('notesList'),
+                    editorForm: document.getElementById('editorForm'),
+                    emptyState: document.getElementById('emptyState'),
+                    editorTitle: document.getElementById('editorTitle'),
+                    editorActions: document.getElementById('editorActions'),
+                    messageArea: document.getElementById('messageArea'),
+                    noteTitle: document.getElementById('noteTitle'),
+                    noteContent: document.getElementById('noteContent'),
+                    noteTags: document.getElementById('noteTags'),
+                    noteEventDate: document.getElementById('noteEventDate'),
+                    noteEventTime: document.getElementById('noteEventTime'),
+                    modal: document.getElementById('generateModal'),
+                    modalClose: document.getElementById('generateModalClose'),
+                    modalMessage: document.getElementById('generateModalMessage'),
+                    modalPrompt: document.getElementById('generatePrompt'),
+                    modalLang: document.getElementById('generateLang'),
+                    modalPreview: document.getElementById('generatedPreview'),
+                    previewTitle: document.getElementById('previewTitle'),
+                    previewContent: document.getElementById('previewContent'),
+                    previewTags: document.getElementById('previewTags'),
+                    previewEvent: document.getElementById('previewEvent'),
+                    cancelGenerateBtn: document.getElementById('cancelGenerateBtn'),
+                    runGenerateBtn: document.getElementById('runGenerateBtn'),
+                    useGeneratedBtn: document.getElementById('useGeneratedBtn')
+                };
+            }
+
             bindEvents() {
-                document.getElementById('newNoteBtn').addEventListener('click', () => this.createNewNote());
-                document.getElementById('saveBtn').addEventListener('click', () => this.saveNote());
-                document.getElementById('deleteBtn').addEventListener('click', () => this.deleteNote());
-                document.getElementById('searchBox').addEventListener('input', (e) => this.searchNotes(e.target.value));
-                
-                // Auto-save on content change (debounced)
+                this.dom.newNoteBtn.addEventListener('click', () => this.createNewNote());
+                this.dom.generateNoteBtn.addEventListener('click', () => this.openGenerateModal());
+                this.dom.saveBtn.addEventListener('click', () => this.saveNote());
+                this.dom.deleteBtn.addEventListener('click', () => this.deleteNote());
+                this.dom.translateBtn.addEventListener('click', () => this.translateCurrentNote());
+                this.dom.searchBox.addEventListener('input', (e) => this.searchNotes(e.target.value));
+                this.dom.modalClose.addEventListener('click', () => this.closeGenerateModal());
+                this.dom.cancelGenerateBtn.addEventListener('click', () => this.closeGenerateModal());
+                this.dom.runGenerateBtn.addEventListener('click', () => this.generateNoteFromPrompt());
+                this.dom.useGeneratedBtn.addEventListener('click', () => this.applyGeneratedNote());
+                this.dom.modal.addEventListener('click', (event) => {
+                    if (event.target === this.dom.modal) this.closeGenerateModal();
+                });
+                document.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape') this.closeGenerateModal();
+                });
+
                 let saveTimeout;
                 const autoSave = () => {
                     clearTimeout(saveTimeout);
                     saveTimeout = setTimeout(() => {
                         if (this.currentNote && this.currentNote.id) {
                             this.saveNote(true);
+                        } else {
+                            this.updateCurrentNoteFromForm();
                         }
                     }, 2000);
                 };
-                
-                document.getElementById('noteTitle').addEventListener('input', autoSave);
-                document.getElementById('noteContent').addEventListener('input', autoSave);
-                document.getElementById('translateBtn').addEventListener('click', () => this.translateCurrentNote());
+
+                [this.dom.noteTitle, this.dom.noteContent, this.dom.noteTags].forEach((element) => {
+                    element.addEventListener('input', autoSave);
+                });
+                [this.dom.noteEventDate, this.dom.noteEventTime].forEach((element) => {
+                    element.addEventListener('change', autoSave);
+                });
             }
 
             async loadNotes() {
                 this.isLoading = true;
                 this.showMessage('Loading notes...', 'loading');
-                
+
                 try {
                     const response = await fetch('/api/notes');
                     if (!response.ok) throw new Error('Failed to load notes');
-                    
+
                     this.notes = await response.json();
                     this.renderNotesList();
+                    if (this.notes.length === 0) {
+                        this.hideEditor();
+                    }
                     this.hideMessage();
                 } catch (error) {
                     this.showMessage(`Error loading notes: ${error.message}`, 'error');
@@ -436,34 +722,56 @@
             }
 
             renderNotesList() {
-                const notesList = document.getElementById('notesList');
-                
+                if (!this.dom.notesList) return;
+
                 if (this.notes.length === 0) {
-                    notesList.innerHTML = '<div class="empty-state"><p>No notes yet. Create your first note!</p></div>';
+                    this.dom.notesList.innerHTML = '<div class="empty-state"><p>No notes yet. Generate or create your first note!</p></div>';
                     return;
                 }
 
-                notesList.innerHTML = this.notes.map(note => `
+                this.dom.notesList.innerHTML = this.notes.map(note => `
                     <div class="note-item ${this.currentNote && this.currentNote.id === note.id ? 'active' : ''}" 
                          data-note-id="${note.id}" onclick="noteTaker.selectNote(${note.id})">
                         <div class="note-title">${this.escapeHtml(note.title || 'Untitled')}</div>
                         <div class="note-preview">${this.escapeHtml(note.content || 'No content')}</div>
                         <div class="note-date">${this.formatDate(note.updated_at)}</div>
+                        ${this.renderNoteMeta(note)}
                     </div>
                 `).join('');
+            }
+
+            renderNoteMeta(note) {
+                const tagsHtml = this.renderTagChips(note.tags);
+                const eventText = note.event_date ? this.formatEvent(note.event_date, note.event_time) : '';
+                const eventHtml = eventText ? `<span class="note-event">📅 ${this.escapeHtml(eventText)}</span>` : '';
+                if (!tagsHtml && !eventHtml) {
+                    return '';
+                }
+                return `<div class="note-meta">${tagsHtml}${eventHtml}</div>`;
+            }
+
+            renderTagChips(tags) {
+                if (!tags) return '';
+                const tagList = Array.isArray(tags) ? tags : tags.split(',');
+                const cleaned = tagList.map(tag => tag.trim()).filter(Boolean);
+                if (cleaned.length === 0) return '';
+                return cleaned.map(tag => `<span class="tag-pill">#${this.escapeHtml(tag)}</span>`).join('');
             }
 
             async selectNote(noteId) {
                 const note = this.notes.find(n => n.id === noteId);
                 if (!note) return;
 
-                this.currentNote = note;
+                this.currentNote = { ...note };
                 this.showEditor();
-                this.renderNotesList(); // Re-render to update active state
-                
-                document.getElementById('noteTitle').value = note.title || '';
-                document.getElementById('noteContent').value = note.content || '';
-                document.getElementById('editorTitle').textContent = note.title || 'Untitled Note';
+                this.renderNotesList();
+
+                this.dom.noteTitle.value = note.title || '';
+                this.dom.noteContent.value = note.content || '';
+                this.dom.noteTags.value = note.tags || '';
+                this.dom.noteEventDate.value = note.event_date || '';
+                this.dom.noteEventTime.value = note.event_time || '';
+                this.dom.editorTitle.textContent = note.title || 'Untitled Note';
             }
 
             createNewNote() {
@@ -471,88 +779,111 @@
                     id: null,
                     title: '',
                     content: '',
+                    tags: '',
+                    event_date: null,
+                    event_time: null,
                     created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
+                    updated_at: new Date().toISOString(),
                 };
-                
+
                 this.showEditor();
-                document.getElementById('noteTitle').value = '';
-                document.getElementById('noteContent').value = '';
-                document.getElementById('editorTitle').textContent = 'New Note';
-                document.getElementById('noteTitle').focus();
-                
-                // Remove active state from all notes
-                document.querySelectorAll('.note-item').forEach(item => {
-                    item.classList.remove('active');
-                });
+                this.dom.noteTitle.value = '';
+                this.dom.noteContent.value = '';
+                this.dom.noteTags.value = '';
+                this.dom.noteEventDate.value = '';
+                this.dom.noteEventTime.value = '';
+                this.dom.editorTitle.textContent = 'New Note';
+                this.dom.noteTitle.focus();
+
+                document.querySelectorAll('.note-item').forEach(item => item.classList.remove('active'));
             }
 
             showEditor() {
-                document.getElementById('emptyState').style.display = 'none';
-                document.getElementById('editorForm').style.display = 'block';
-                document.getElementById('editorActions').style.display = 'flex';
+                this.dom.emptyState.style.display = 'none';
+                this.dom.editorForm.style.display = 'block';
+                this.dom.editorActions.style.display = 'flex';
             }
 
             hideEditor() {
-                document.getElementById('emptyState').style.display = 'block';
-                document.getElementById('editorForm').style.display = 'none';
-                document.getElementById('editorActions').style.display = 'none';
-                document.getElementById('editorTitle').textContent = 'Select a note to edit';
+                this.dom.emptyState.style.display = 'block';
+                this.dom.editorForm.style.display = 'none';
+                this.dom.editorActions.style.display = 'none';
+                this.dom.editorTitle.textContent = 'Select a note to edit';
                 this.currentNote = null;
+            }
+
+            getFormState() {
+                return {
+                    title: this.dom.noteTitle.value.trim(),
+                    content: this.dom.noteContent.value.trim(),
+                    tags: this.dom.noteTags.value.trim(),
+                    event_date: this.dom.noteEventDate.value || null,
+                    event_time: this.dom.noteEventTime.value || null
+                };
+            }
+
+            updateCurrentNoteFromForm() {
+                if (!this.currentNote) return;
+                const state = this.getFormState();
+                this.currentNote = { ...this.currentNote, ...state };
             }
 
             async saveNote(isAutoSave = false) {
                 if (!this.currentNote) return;
 
-                const title = document.getElementById('noteTitle').value.trim();
-                const content = document.getElementById('noteContent').value.trim();
+                const formState = this.getFormState();
 
-                if (!title && !content) {
+                if (!formState.title && !formState.content) {
                     if (!isAutoSave) {
                         this.showMessage('Please enter a title or content', 'error');
                     }
                     return;
                 }
 
-                try {
-                    const noteData = {
-                        title: title || 'Untitled',
-                        content: content
-                    };
+                const payload = {
+                    ...formState,
+                    title: formState.title || 'Untitled'
+                };
 
+                try {
                     let response;
                     if (this.currentNote.id) {
-                        // Update existing note
                         response = await fetch(`/api/notes/${this.currentNote.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(noteData)
+                            body: JSON.stringify(payload)
                         });
                     } else {
-                        // Create new note
                         response = await fetch('/api/notes', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(noteData)
+                            body: JSON.stringify(payload)
                         });
                     }
 
-                    if (!response.ok) throw new Error('Failed to save note');
-
-                    const savedNote = await response.json();
-                    this.currentNote = savedNote;
-                    
-                    // Update notes list
-                    const existingIndex = this.notes.findIndex(n => n.id === savedNote.id);
-                    if (existingIndex >= 0) {
-                        this.notes[existingIndex] = savedNote;
-                    } else {
-                        this.notes.unshift(savedNote);
+                    const result = await response.json();
+                    if (!response.ok) {
+                        const message = result && result.error ? result.error : 'Failed to save note';
+                        throw new Error(message);
                     }
-                    
+
+                    this.currentNote = { ...result };
+                    this.dom.noteTitle.value = result.title || '';
+                    this.dom.noteContent.value = result.content || '';
+                    this.dom.noteTags.value = result.tags || '';
+                    this.dom.noteEventDate.value = result.event_date || '';
+                    this.dom.noteEventTime.value = result.event_time || '';
+                    this.dom.editorTitle.textContent = result.title || 'Untitled Note';
+
+                    const existingIndex = this.notes.findIndex(n => n.id === result.id);
+                    if (existingIndex >= 0) {
+                        this.notes[existingIndex] = result;
+                    } else {
+                        this.notes.unshift(result);
+                    }
+
                     this.renderNotesList();
-                    document.getElementById('editorTitle').textContent = savedNote.title;
-                    
+
                     if (!isAutoSave) {
                         this.showMessage('Note saved successfully!', 'success');
                     }
@@ -567,7 +898,7 @@
                     return;
                 }
 
-                const target = document.getElementById('translateLang').value;
+                const target = this.dom.translateLang.value;
                 this.showMessage('Translating note...', 'loading');
 
                 try {
@@ -577,15 +908,17 @@
                         body: JSON.stringify({ target_language: target })
                     });
 
-                    if (!resp.ok) throw new Error('Translation failed');
                     const data = await resp.json();
+                    if (!resp.ok) {
+                        const message = data && data.error ? data.error : 'Translation failed';
+                        throw new Error(message);
+                    }
 
-                    // Show translated title and content in editor (user can review and save)
-                    document.getElementById('noteTitle').value = data.translated_title || '';
-                    document.getElementById('noteContent').value = data.translated_content || '';
+                    this.dom.noteTitle.value = data.translated_title || '';
+                    this.dom.noteContent.value = data.translated_content || '';
                     this.currentNote.title = data.translated_title || this.currentNote.title;
                     this.currentNote.content = data.translated_content || this.currentNote.content;
-                    document.getElementById('editorTitle').textContent = (this.currentNote.title || 'Untitled') + ` — ${target}`;
+                    this.dom.editorTitle.textContent = (this.currentNote.title || 'Untitled') + ` — ${target}`;
                     this.showMessage('Translation ready. Review and save if desired.', 'success');
                 } catch (err) {
                     this.showMessage(`Error translating note: ${err.message}`, 'error');
@@ -604,7 +937,6 @@
 
                     if (!response.ok) throw new Error('Failed to delete note');
 
-                    // Remove from notes array
                     this.notes = this.notes.filter(n => n.id !== this.currentNote.id);
                     this.renderNotesList();
                     this.hideEditor();
@@ -615,49 +947,188 @@
             }
 
             searchNotes(query) {
-                const filteredNotes = query.trim() === '' ? this.notes : 
-                    this.notes.filter(note => 
-                        (note.title && note.title.toLowerCase().includes(query.toLowerCase())) ||
-                        (note.content && note.content.toLowerCase().includes(query.toLowerCase()))
-                    );
+                const trimmed = query.trim().toLowerCase();
+                const filteredNotes = trimmed === '' ? this.notes :
+                    this.notes.filter(note => {
+                        const tags = note.tags ? note.tags.toLowerCase() : '';
+                        const eventDate = note.event_date ? String(note.event_date).toLowerCase() : '';
+                        const eventTime = note.event_time ? String(note.event_time).toLowerCase() : '';
+                        return (
+                            (note.title && note.title.toLowerCase().includes(trimmed)) ||
+                            (note.content && note.content.toLowerCase().includes(trimmed)) ||
+                            (tags && tags.includes(trimmed)) ||
+                            (eventDate && eventDate.includes(trimmed)) ||
+                            (eventTime && eventTime.includes(trimmed))
+                        );
+                    });
 
-                const notesList = document.getElementById('notesList');
                 if (filteredNotes.length === 0) {
-                    notesList.innerHTML = '<div class="empty-state"><p>No notes found matching your search.</p></div>';
+                    this.dom.notesList.innerHTML = '<div class="empty-state"><p>No notes found matching your search.</p></div>';
                     return;
                 }
 
-                notesList.innerHTML = filteredNotes.map(note => `
+                this.dom.notesList.innerHTML = filteredNotes.map(note => `
                     <div class="note-item ${this.currentNote && this.currentNote.id === note.id ? 'active' : ''}" 
                          data-note-id="${note.id}" onclick="noteTaker.selectNote(${note.id})">
                         <div class="note-title">${this.escapeHtml(note.title || 'Untitled')}</div>
                         <div class="note-preview">${this.escapeHtml(note.content || 'No content')}</div>
                         <div class="note-date">${this.formatDate(note.updated_at)}</div>
+                        ${this.renderNoteMeta(note)}
                     </div>
                 `).join('');
             }
 
+            openGenerateModal() {
+                this.clearGenerateModal();
+                this.dom.modal.classList.add('active');
+                this.dom.modal.setAttribute('aria-hidden', 'false');
+                this.dom.modalPrompt.focus();
+            }
+
+            closeGenerateModal() {
+                this.dom.modal.classList.remove('active');
+                this.dom.modal.setAttribute('aria-hidden', 'true');
+                this.clearGenerateModal();
+            }
+
+            clearGenerateModal() {
+                this.generatedNote = null;
+                this.dom.modalPrompt.value = '';
+                this.dom.modalLang.value = 'english';
+                this.dom.useGeneratedBtn.style.display = 'none';
+                this.dom.useGeneratedBtn.disabled = false;
+                this.showGeneratedPreview(null);
+                this.setGenerateModalMessage('');
+                this.toggleGenerateButtons(false);
+            }
+
+            setGenerateModalMessage(message, type) {
+                if (!message) {
+                    this.dom.modalMessage.innerHTML = '';
+                    return;
+                }
+                this.dom.modalMessage.innerHTML = `<div class="${type}">${message}</div>`;
+            }
+
+            toggleGenerateButtons(isLoading) {
+                this.isGenerating = isLoading;
+                this.dom.runGenerateBtn.disabled = isLoading;
+                this.dom.runGenerateBtn.textContent = isLoading ? 'Generating...' : 'Generate';
+                this.dom.useGeneratedBtn.disabled = isLoading;
+            }
+
+            showGeneratedPreview(data) {
+                if (!data) {
+                    this.dom.modalPreview.style.display = 'none';
+                    this.dom.previewTitle.textContent = '';
+                    this.dom.previewContent.textContent = '';
+                    this.dom.previewTags.innerHTML = '';
+                    this.dom.previewEvent.textContent = '';
+                    return;
+                }
+
+                this.dom.modalPreview.style.display = 'block';
+                this.dom.previewTitle.textContent = data.title || 'Untitled';
+                this.dom.previewContent.textContent = data.content || 'No content suggested';
+                this.dom.previewTags.innerHTML = this.renderTagChips(data.tags) || '<span class="helper-text">No tags suggested</span>';
+                const eventText = data.event_date ? this.formatEvent(data.event_date, data.event_time) : '';
+                this.dom.previewEvent.textContent = eventText || 'No event details';
+            }
+
+            async generateNoteFromPrompt() {
+                if (this.isGenerating) return;
+
+                const prompt = this.dom.modalPrompt.value.trim();
+                if (!prompt) {
+                    this.setGenerateModalMessage('Please describe what you want to note.', 'error');
+                    return;
+                }
+
+                const language = this.dom.modalLang.value || 'english';
+                this.toggleGenerateButtons(true);
+                this.setGenerateModalMessage('Generating note...', 'loading');
+                this.showGeneratedPreview(null);
+
+                try {
+                    const response = await fetch('/api/notes/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt, language })
+                    });
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        const message = result && result.error ? result.error : 'Failed to generate note';
+                        throw new Error(message);
+                    }
+
+                    this.generatedNote = result;
+                    this.showGeneratedPreview(result);
+                    this.dom.useGeneratedBtn.style.display = 'inline-flex';
+                    this.setGenerateModalMessage('Note generated. Click "Use Note" to apply it.', 'success');
+                } catch (error) {
+                    this.generatedNote = null;
+                    this.dom.useGeneratedBtn.style.display = 'none';
+                    this.setGenerateModalMessage(`Error generating note: ${error.message}`, 'error');
+                } finally {
+                    this.toggleGenerateButtons(false);
+                }
+            }
+
+            applyGeneratedNote() {
+                if (!this.generatedNote) return;
+
+                if (!this.currentNote || this.currentNote.id) {
+                    this.createNewNote();
+                } else {
+                    this.showEditor();
+                }
+
+                const { title, content, tags, event_date, event_time } = this.generatedNote;
+
+                this.dom.noteTitle.value = title || '';
+                this.dom.noteContent.value = content || '';
+                this.dom.noteTags.value = tags || '';
+                this.dom.noteEventDate.value = event_date || '';
+                this.dom.noteEventTime.value = event_time || '';
+                this.dom.editorTitle.textContent = title || 'Generated Note';
+
+                this.currentNote = {
+                    ...this.currentNote,
+                    title: title || '',
+                    content: content || '',
+                    tags: tags || '',
+                    event_date: event_date || null,
+                    event_time: event_time || null
+                };
+
+                this.closeGenerateModal();
+                this.showMessage('Generated note applied. Review and save when ready.', 'success');
+            }
+
             showMessage(message, type) {
-                const messageArea = document.getElementById('messageArea');
-                messageArea.innerHTML = `<div class="${type}">${message}</div>`;
-                
+                this.dom.messageArea.innerHTML = `<div class="${type}">${message}</div>`;
                 if (type === 'success') {
                     setTimeout(() => this.hideMessage(), 3000);
                 }
             }
 
             hideMessage() {
-                document.getElementById('messageArea').innerHTML = '';
+                this.dom.messageArea.innerHTML = '';
             }
 
             escapeHtml(text) {
                 const div = document.createElement('div');
-                div.textContent = text;
+                div.textContent = text || '';
                 return div.innerHTML;
             }
 
             formatDate(dateString) {
+                if (!dateString) return '';
                 const date = new Date(dateString);
+                if (Number.isNaN(date.getTime())) {
+                    return dateString;
+                }
                 const now = new Date();
                 const diffTime = Math.abs(now - date);
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -672,11 +1143,24 @@
                     return date.toLocaleDateString();
                 }
             }
+
+            formatEvent(dateString, timeString) {
+                if (!dateString) return '';
+                const isoString = timeString ? `${dateString}T${timeString}` : `${dateString}T00:00`;
+                const eventDate = new Date(isoString);
+                if (Number.isNaN(eventDate.getTime())) {
+                    return timeString ? `${dateString} ${timeString}` : dateString;
+                }
+                const datePart = eventDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+                if (!timeString) {
+                    return datePart;
+                }
+                const timePart = eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                return `${datePart} · ${timePart}`;
+            }
         }
 
-        // Initialize the app
         const noteTaker = new NoteTaker();
     </script>
 </body>
 </html>
-
