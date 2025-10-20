@@ -31,11 +31,13 @@ OPENAI_API_KEY: LLM service API key
 
 SECRET_KEY: Same as local .env  
 
+![enviroment variables](https://github.com/yichen909/note-taking-app/blob/main/enviroment%20variables.png)
+
 ### Execute deployment
 
 # challenges
 Missing Variable Detection: The application initially failed silently when critical variables (like `DATABASE_URL`) were missing, defaulting to SQLite without warning. This required adding explicit validation checks that raise clear errors for missing required variables.  
-Path Resolution Problems**: Vercel's execution environment uses different working directories than local development. This broke relative imports between `src/main.py` and the new `api/index.py` entry point, requiring explicit package path configuration.  
+Path Resolution Problems: Vercel's execution environment uses different working directories than local development. This broke relative imports between `src/main.py` and the new `api/index.py` entry point, requiring explicit package path configuration.  
 
 
 
