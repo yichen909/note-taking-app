@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from openai import OpenAI
 from dotenv import load_dotenv
 from pathlib import Path
@@ -60,7 +60,9 @@ Output:
 
 # a function to extract structured notes using LLM model
 def extract_structured_notes(user_input, lang="english"):
-    current_datetime = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+    utc_now = datetime.utcnow()
+    beijing_now = utc_now + timedelta(hours=8)
+    current_datetime = beijing_now.strftime("%Y-%m-%d %H:%M:%S CST")
     messages = [
         {
             "role": "system",

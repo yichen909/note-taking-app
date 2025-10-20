@@ -1,5 +1,7 @@
+import calendar
 import json
-from datetime import datetime
+import re
+from datetime import datetime, timedelta
 
 from flask import Blueprint, jsonify, request
 
@@ -8,13 +10,84 @@ from src.models.note import Note, db
 note_bp = Blueprint("note", __name__)
 
 
+def _add_months(base_date, months):
+    month = base_date.month - 1 + months
+    year = base_date.year + month // 12
+    month = month % 12 + 1
+    day = min(base_date.day, calendar.monthrange(year, month)[1])
+    return base_date.replace(year=year, month=month, day=day)
+
+
+def _safe_add_years(base_date, years):
+    try:
+        return base_date.replace(year=base_date.year + years)
+    except ValueError:
+        # Handle Feb 29 gracefully by falling back to Feb 28
+        return base_date.replace(month=2, day=28, year=base_date.year + years)
+
+
 def _parse_date(value):
     if not value:
         return None
-    try:
-        return datetime.strptime(value, "%Y-%m-%d").date()
-    except (ValueError, TypeError):
-        return None
+
+    if isinstance(value, datetime):
+        base_local = value + timedelta(hours=8)
+        return base_local.date()
+
+    text = str(value).strip()
+
+    for fmt in ("%Y-%m-%d", "%Y/%m/%d"):
+        try:
+            return datetime.strptime(text, fmt).date()
+        except (ValueError, TypeError):
+            continue
+
+    today = (datetime.utcnow() + timedelta(hours=8)).date()
+    lowered = text.lower()
+
+    keyword_offsets = {
+        "today": 0,
+        "tomorrow": 1,
+        "yesterday": -1,
+    }
+    if lowered in keyword_offsets:
+        return today + timedelta(days=keyword_offsets[lowered])
+
+    if lowered in {"next week", "in a week"}:
+        return today + timedelta(weeks=1)
+    if lowered in {"next month", "in a month"}:
+        return _add_months(today, 1)
+    if lowered in {"next year", "in a year"}:
+        return _safe_add_years(today, 1)
+
+    in_days = re.match(r"in\s+(\d+)\s+day", lowered)
+    if in_days:
+        return today + timedelta(days=int(in_days.group(1)))
+
+    in_weeks = re.match(r"in\s+(\d+)\s+week", lowered)
+    if in_weeks:
+        return today + timedelta(weeks=int(in_weeks.group(1)))
+
+    in_months = re.match(r"in\s+(\d+)\s+month", lowered)
+    if in_months:
+        return _add_months(today, int(in_months.group(1)))
+
+    in_years = re.match(r"in\s+(\d+)\s+year", lowered)
+    if in_years:
+        return _safe_add_years(today, int(in_years.group(1)))
+
+    next_weekday = re.match(r"next\s+([a-z]+)", lowered)
+    if next_weekday:
+        target = next_weekday.group(1)
+        weekday_map = {day.lower(): idx for idx, day in enumerate(calendar.day_name)}
+        if target in weekday_map:
+            current = today.weekday()
+            desired = weekday_map[target]
+            days_ahead = (desired - current) % 7
+            days_ahead = days_ahead or 7
+            return today + timedelta(days=days_ahead)
+
+    return None
 
 
 def _parse_time(value):
@@ -217,10 +290,10 @@ def generate_note():
         parsed_event_time = _parse_time(event_time)
 
         if parsed_event_date is None:
-            parsed_event_date = datetime.now().date()
+            parsed_event_date = (datetime.utcnow() + timedelta(hours=8)).date()
 
         if parsed_event_time is None:
-            now = datetime.now()
+            now = datetime.utcnow() + timedelta(hours=8)
             parsed_event_time = now.replace(second=0, microsecond=0).time()
 
         response_payload = {
