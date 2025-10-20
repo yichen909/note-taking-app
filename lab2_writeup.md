@@ -4,7 +4,8 @@ Visit [Supabase](https://supabase.com), complete registration, and create a new 
 
 After project creation, go to Settings → Database and copy the Connection String  
 
-Navigate to SQL Editor, create new query, and execute the following SQL  
+Navigate to SQL Editor, create new query, and execute the following SQL 
+!(table)(https://github.com/yichen909/note-taking-app/blob/main/table.png)
 
 # Dependency Configuration & Environment Variables
 ## Adding Required Dependencies
